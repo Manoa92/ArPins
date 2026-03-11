@@ -15,6 +15,7 @@ export default defineConfig({
   build: {
     outDir: 'docs',
   },
+  base: './',
   server: {
     host: true,
     port: 5173,
