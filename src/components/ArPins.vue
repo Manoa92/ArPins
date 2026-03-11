@@ -28,9 +28,33 @@ onMounted(async () => {
 
     container.value.appendChild(renderer.domElement)
 
-    document.body.appendChild(
-        THREE.WEBXR.createButton(renderer, { requiredFeatures: ["hit-test"] })
-    )
+    // Create a simple WebXR button
+    if ("xr" in navigator) {
+        const button = document.createElement("button")
+        button.textContent = "Enter AR"
+        button.style.position = "absolute"
+        button.style.bottom = "20px"
+        button.style.left = "50%"
+        button.style.transform = "translateX(-50%)"
+        button.style.padding = "10px 20px"
+        button.style.fontSize = "16px"
+        button.style.zIndex = "100"
+
+        button.onclick = async () => {
+            try {
+                const session = await navigator.xr.requestSession("immersive-ar", {
+                    requiredFeatures: ["hit-test"],
+                    optionalFeatures: ["dom-overlay"],
+                    domOverlay: { root: document.body }
+                })
+                renderer.xr.setSession(session)
+            } catch (e) {
+                console.error("AR not supported:", e)
+            }
+        }
+
+        document.body.appendChild(button)
+    }
 
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1)
     scene.add(light)
@@ -61,7 +85,7 @@ window.addEventListener("click", () => {
 
 <style>
 .ar-container {
-    width: 100vw;
-    height: 100vh;
+    width: 100dvw;
+    height: 100dvh;
 }
 </style>
