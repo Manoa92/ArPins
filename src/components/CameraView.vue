@@ -71,7 +71,7 @@ const props = defineProps({
   errorMsg:   { type: String,  default: '' },
 })
 
-const emit = defineEmits(['start', 'click-detection'])
+const emit = defineEmits(['start', 'click-detection', 'click-canvas'])
 
 // ─── Refs ──────────────────────────────────────────────────────────────────
 const zoneEl    = ref(null)
@@ -128,7 +128,7 @@ function onCanvasClick(event) {
   const cx     = (event.clientX - rect.left)  * scaleX
   const cy     = (event.clientY - rect.top)   * scaleY
 
-  // Trouver l'objet le plus petit qui contient le clic (évite les grands faux-positifs)
+  // Chercher l'objet qui contient le clic
   let hit = null
   let minArea = Infinity
 
@@ -141,13 +141,20 @@ function onCanvasClick(event) {
   }
 
   if (hit) {
+    // Clic sur un objet détecté
     emit('click-detection', {
       detection: hit,
       canvasW: canvas.width,
       canvasH: canvas.height,
     })
   } else {
-    showToast('Aucun objet ici — réessayez')
+    // Clic en dehors des objets détectés — créer un tag manuel
+    emit('click-canvas', {
+      x: cx,
+      y: cy,
+      canvasW: canvas.width,
+      canvasH: canvas.height,
+    })
   }
 }
 

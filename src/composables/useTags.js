@@ -33,6 +33,35 @@ export function useTags() {
       screenY: 0,
       confidence: detection.score,
       visible: true,
+      isManual: false,
+    })
+
+    return label
+  }
+
+  /**
+   * Crée un tag manuel à une position cliquée.
+   * @param {number} cx - coordonnée X du clic (en pixels canvas)
+   * @param {number} cy - coordonnée Y du clic (en pixels canvas)
+   * @param {number} canvasW - largeur du canvas natif
+   * @param {number} canvasH - hauteur du canvas natif
+   * @param {string} className - nom de la classe (par défaut "Zone")
+   */
+  function addManualTag(cx, cy, canvasW, canvasH, className = 'Zone') {
+    const count = tags.filter(t => t.detectedClass === className).length
+    const label = count > 0 ? `${className} ${count + 1}` : className
+
+    tags.push({
+      id: ++_id,
+      label,
+      detectedClass: className,
+      normX: cx / canvasW,
+      normY: cy / canvasH,
+      screenX: 0,
+      screenY: 0,
+      confidence: 1.0,
+      visible: true,
+      isManual: true,
     })
 
     return label
@@ -83,5 +112,5 @@ export function useTags() {
     }
   }
 
-  return { tags, addTag, removeTag, updateTagPositions }
+  return { tags, addTag, addManualTag, removeTag, updateTagPositions }
 }

@@ -21,6 +21,7 @@
         :error-msg="cameraError || ''"
         @start="handleStart"
         @click-detection="handleClickDetection"
+        @click-canvas="handleCanvasClick"
       />
 
       <TagPanel
@@ -42,7 +43,7 @@ import { useTags }     from './composables/useTags.js'
 // ─── Composables ──────────────────────────────────────────────────────────
 const { videoEl: cameraVideoRef, isStreaming, error: cameraError, startCamera } = useCamera()
 const { status: modelStatus, detections, loadModel, startDetectionLoop } = useDetector()
-const { tags, addTag, removeTag, updateTagPositions } = useTags()
+const { tags, addTag, addManualTag, removeTag, updateTagPositions } = useTags()
 
 // ─── Ref vers CameraView (pour accéder à videoEl exposé) ──────────────────
 const cameraViewRef = ref(null)
@@ -80,6 +81,12 @@ async function handleStart() {
 // ─── Clic sur objet détecté ──────────────────────────────────────────────
 function handleClickDetection({ detection, canvasW, canvasH }) {
   const label = addTag(detection, canvasW, canvasH)
+  cameraViewRef.value.showToast(`Tag créé : « ${label} »`)
+}
+
+// ─── Clic sur le canvas (zone sans objet) ────────────────────────────────
+function handleCanvasClick({ x, y, canvasW, canvasH }) {
+  const label = addManualTag(x, y, canvasW, canvasH, 'Zone')
   cameraViewRef.value.showToast(`Tag créé : « ${label} »`)
 }
 
