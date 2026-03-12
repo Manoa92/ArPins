@@ -12,14 +12,27 @@ export function useTags() {
    * @param {number} canvasW    - largeur du canvas natif
    * @param {number} canvasH    - hauteur du canvas natif
    */
-  function addTag(detection, canvasW, canvasH) {
+  /**
+   * Crée un tag depuis une détection COCO-SSD.
+   * @param {Object} detection  - objet détecté { class, score, bbox }
+   * @param {number} canvasW    - largeur du canvas natif
+   * @param {number} canvasH    - hauteur du canvas natif
+   * @param {string|null} overrideLabel - libellé fourni par l'utilisateur (ou null pour auto)
+   */
+  function addTag(detection, canvasW, canvasH, overrideLabel = null) {
     const [bx, by, bw, bh] = detection.bbox
     const cx = bx + bw / 2
     const cy = by + bh / 2
 
-    // Compter combien de tags du même type existent déjà
-    const count = tags.filter(t => t.detectedClass === detection.class).length
-    const label = count > 0 ? `${detection.class} ${count + 1}` : detection.class
+    // Calcul du label final (priorité à override)
+    let label
+    if (overrideLabel) {
+      label = overrideLabel
+    } else {
+      // Compter combien de tags du même type existent déjà
+      const count = tags.filter(t => t.detectedClass === detection.class).length
+      label = count > 0 ? `${detection.class} ${count + 1}` : detection.class
+    }
 
     tags.push({
       id: ++_id,
@@ -78,6 +91,14 @@ export function useTags() {
    */
   function updateTagPositions(detections, canvasW, canvasH, zoneW, zoneH) {
     for (const tag of tags) {
+      // Les tags manuels ne bougent pas : leur position normalisée fixe suffit.
+      if (tag.isManual) {
+        tag.visible = true
+        tag.screenX = tag.normX * zoneW
+        tag.screenY = tag.normY * zoneH
+        continue
+      }
+
       let best = null
       let bestDist = Infinity
       const MAX_DIST = Math.max(canvasW, canvasH) * 0.45

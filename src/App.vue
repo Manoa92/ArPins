@@ -80,14 +80,28 @@ async function handleStart() {
 
 // ─── Clic sur objet détecté ──────────────────────────────────────────────
 function handleClickDetection({ detection, canvasW, canvasH }) {
-  const label = addTag(detection, canvasW, canvasH)
-  cameraViewRef.value.showToast(`Tag créé : « ${label} »`)
+  if (!isStreaming.value) {
+    cameraViewRef.value.showToast('Caméra inactive')
+    return
+  }
+  // l'objet est dans le champ, demander un libellé à l'utilisateur
+  const defaultLabel = detection.class
+  const userLabel = window.prompt('Libellé du tag (laisser vide pour utiliser la classe détectée) :', defaultLabel)
+  const label = addTag(detection, canvasW, canvasH, userLabel && userLabel.trim() ? userLabel.trim() : null)
+  cameraViewRef.value.showToast(`Tag créé : « ${label} » (visible)`)
 }
 
 // ─── Clic sur le canvas (zone sans objet) ────────────────────────────────
 function handleCanvasClick({ x, y, canvasW, canvasH }) {
-  const label = addManualTag(x, y, canvasW, canvasH, 'Zone')
-  cameraViewRef.value.showToast(`Tag créé : « ${label} »`)
+  if (!isStreaming.value) {
+    cameraViewRef.value.showToast('Caméra inactive')
+    return
+  }
+  // point cliqué visible, mais pas d'objet détecté
+  const defaultLabel = 'Zone'
+  const userLabel = window.prompt('Libellé du tag (par exemple « mur ») :', defaultLabel)
+  const label = addManualTag(x, y, canvasW, canvasH, userLabel && userLabel.trim() ? userLabel.trim() : defaultLabel)
+  cameraViewRef.value.showToast(`Tag créé : « ${label} » (position manuelle)`)
 }
 
 // ─── Mise à jour des positions (sync avec detections) ────────────────────
