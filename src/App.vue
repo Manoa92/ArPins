@@ -43,10 +43,41 @@ import { useTags }     from './composables/useTags.js'
 // ─── Composables ──────────────────────────────────────────────────────────
 const { videoEl: cameraVideoRef, isStreaming, error: cameraError, startCamera } = useCamera()
 const { status: modelStatus, detections, loadModel, startDetectionLoop } = useDetector()
-const { tags, addTag, addManualTag, removeTag, updateTagPositions } = useTags()
+const { tags, addTag, addManualTag, removeTag, updateTagPositions } = useTags()  // updateTagPositions now takes frame data
 
 // ─── Ref vers CameraView (pour accéder à videoEl exposé) ──────────────────
 const cameraViewRef = ref(null)
+
+// Offscreen canvas pour capture de frame (utilisé par la boucle de position)
+const captureCanvas = document.createElement('canvas')
+const captureCtx    = captureCanvas.getContext('2d')
+
+function captureFrame(video) {
+  const w = video.videoWidth || video.clientWidth
+  const h = video.videoHeight || video.clientHeight
+  if (!w || !h) return null
+  captureCanvas.width = w
+  captureCanvas.height = h
+  captureCtx.drawImage(video, 0, 0, w, h)
+  return captureCtx.getImageData(0, 0, w, h)
+}
+
+// extrait une petite région centrée sur (cx, cy) à partir d'une ImageData
+function makeTemplate(frameData, cx, cy, size = 80) {
+  if (!frameData) return null
+  const tw = Math.min(size, frameData.width)
+  const th = Math.min(size, frameData.height)
+  const sx = Math.max(0, Math.round(cx - tw / 2))
+  const sy = Math.max(0, Math.round(cy - th / 2))
+
+  // créer un canvas temporaire pour copie
+  const temp = document.createElement('canvas')
+  temp.width = tw
+  temp.height = th
+  const tctx = temp.getContext('2d')
+  tctx.putImageData(frameData, -sx, -sy)
+  return tctx.getImageData(0, 0, tw, th)
+}
 
 // ─── Status bar ──────────────────────────────────────────────────────────
 const statusText = computed(() => {
@@ -100,7 +131,19 @@ function handleCanvasClick({ x, y, canvasW, canvasH }) {
   // point cliqué visible, mais pas d'objet détecté
   const defaultLabel = 'Zone'
   const userLabel = window.prompt('Libellé du tag (par exemple « mur ») :', defaultLabel)
-  const label = addManualTag(x, y, canvasW, canvasH, userLabel && userLabel.trim() ? userLabel.trim() : defaultLabel)
+  
+  // capture template autour du point (pour suivi ultérieur)
+  const frame = captureFrame(cameraViewRef.value.videoEl)
+  const template = makeTemplate(frame, x, y, 80)
+
+  const label = addManualTag(
+    x,
+    y,
+    canvasW,
+    canvasH,
+    userLabel && userLabel.trim() ? userLabel.trim() : defaultLabel,
+    template
+  )
   cameraViewRef.value.showToast(`Tag créé : « ${label} » (position manuelle)`)
 }
 
@@ -114,12 +157,16 @@ function positionLoop() {
 
     if (zone && video) {
       const zoneRect = zone.getBoundingClientRect()
+      // capture image data de la frame pour le suivi manuel
+      const frameData = captureFrame(video)
+
       updateTagPositions(
         detections.value,
         video.videoWidth  || video.clientWidth,
         video.videoHeight || video.clientHeight,
         zoneRect.width,
         zoneRect.height,
+        frameData,
       )
     }
   }

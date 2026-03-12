@@ -60,7 +60,7 @@ export function useTags() {
    * @param {number} canvasH - hauteur du canvas natif
    * @param {string} className - nom de la classe (par défaut "Zone")
    */
-  function addManualTag(cx, cy, canvasW, canvasH, className = 'Zone') {
+  function addManualTag(cx, cy, canvasW, canvasH, className = 'Zone', template = null) {
     const count = tags.filter(t => t.detectedClass === className).length
     const label = count > 0 ? `${className} ${count + 1}` : className
 
@@ -75,6 +75,7 @@ export function useTags() {
       confidence: 1.0,
       visible: true,
       isManual: true,
+      template,
     })
 
     return label
@@ -89,11 +90,66 @@ export function useTags() {
    * Met à jour la position des tags en fonction des nouvelles détections.
    * Utilise la distance euclidienne pour associer chaque tag à la détection la plus proche.
    */
-  function updateTagPositions(detections, canvasW, canvasH, zoneW, zoneH) {
+  // recherche de correspondance par template dans l'image
+  function matchTemplate(frame, template, prevX, prevY) {
+    if (!frame || !template) return null
+    const fw = frame.width
+    const fh = frame.height
+    const tw = template.width
+    const th = template.height
+    const data = frame.data
+    const tdata = template.data
+    let best = { x: prevX, y: prevY, score: Infinity }
+
+    const radius = Math.max(fw, fh) * 0.3
+    const startY = Math.max(0, prevY - radius)
+    const endY = Math.min(fh - th, prevY + radius)
+    const startX = Math.max(0, prevX - radius)
+    const endX = Math.min(fw - tw, prevX + radius)
+
+    for (let y = startY; y <= endY; y += 4) {
+      for (let x = startX; x <= endX; x += 4) {
+        let s = 0
+        for (let ty = 0; ty < th; ty++) {
+          const fy = (y + ty) * fw
+          const tyOff = ty * tw
+          for (let tx = 0; tx < tw; tx++) {
+            const fi = (fy + x + tx) * 4
+            const ti = (tyOff + tx) * 4
+            for (let c = 0; c < 3; c++) {
+              const diff = data[fi + c] - tdata[ti + c]
+              s += diff * diff
+            }
+          }
+        }
+        if (s < best.score) {
+          best = { x, y, score: s }
+        }
+      }
+    }
+    return best
+  }
+
+  function updateTagPositions(detections, canvasW, canvasH, zoneW, zoneH, frame) {
     for (const tag of tags) {
-      // Les tags manuels ne bougent pas : leur position normalisée fixe suffit.
+      // Tags manuels : recherche par template
       if (tag.isManual) {
-        tag.visible = true
+        if (tag.template) {
+          const prevX = tag.normX * canvasW - tag.template.width / 2
+          const prevY = tag.normY * canvasH - tag.template.height / 2
+          const result = matchTemplate(frame, tag.template, prevX, prevY)
+          if (result && result.score < Infinity) {
+            // mettre à jour centre normalisé
+            tag.normX = (result.x + tag.template.width / 2) / canvasW
+            tag.normY = (result.y + tag.template.height / 2) / canvasH
+            tag.visible = true
+          } else {
+            tag.visible = false
+          }
+        } else {
+          // pas de template (cas improbable) -> reste statique
+          tag.visible = true
+        }
         tag.screenX = tag.normX * zoneW
         tag.screenY = tag.normY * zoneH
         continue
