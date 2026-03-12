@@ -12,11 +12,12 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow-models/depth-estimation": "^0.0.4",
+    "@tensorflow/tfjs": "^4.17.0",
     "pinia": "^3.0.4",
     "three": "^0.183.2",
-    "vue": "^3.5.29",
-    "@tensorflow/tfjs": "^4.17.0",
-    "@tensorflow-models/coco-ssd": "^2.2.3"
+    "vue": "^3.5.29"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",

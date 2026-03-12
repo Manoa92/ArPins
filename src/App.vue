@@ -38,11 +38,13 @@ import CameraView from './components/CameraView.vue'
 import TagPanel   from './components/TagPanel.vue'
 import { useCamera }   from './composables/useCamera.js'
 import { useDetector } from './composables/useDetector.js'
+import { useSensors }  from './composables/useSensors.js'
 import { useTags }     from './composables/useTags.js'
 
 // ─── Composables ──────────────────────────────────────────────────────────
 const { videoEl: cameraVideoRef, isStreaming, error: cameraError, startCamera } = useCamera()
-const { status: modelStatus, detections, loadModel, startDetectionLoop } = useDetector()
+const { status: modelStatus, detections, depthMap, loadModels, startDetectionLoop, getDepthAt } = useDetector()
+const { orientation, rotationRate } = useSensors()
 const { tags, addTag, addManualTag, removeTag, updateTagPositions } = useTags()  // updateTagPositions now takes frame data
 
 // ─── Ref vers CameraView (pour accéder à videoEl exposé) ──────────────────
@@ -104,8 +106,8 @@ async function handleStart() {
   // Redimensionner les canvas une fois la vidéo prête
   cameraViewRef.value.resizeCanvases()
 
-  // Charger le modèle TF et démarrer la boucle de détection
-  await loadModel()
+  // Charger les modèles choisis (détection + profondeur) et démarrer la boucle
+  await loadModels()
   startDetectionLoop(cameraVideoRef.value)
 }
 
@@ -118,8 +120,38 @@ function handleClickDetection({ detection, canvasW, canvasH }) {
   // l'objet est dans le champ, demander un libellé à l'utilisateur
   const defaultLabel = detection.class
   const userLabel = window.prompt('Libellé du tag (laisser vide pour utiliser la classe détectée) :', defaultLabel)
-  const label = addTag(detection, canvasW, canvasH, userLabel && userLabel.trim() ? userLabel.trim() : null)
-  cameraViewRef.value.showToast(`Tag créé : « ${label} » (visible)`)
+
+  // calculer profondeur/position si disponible
+  let extra = {}
+  const cx = detection.bbox[0] + detection.bbox[2] / 2
+  const cy = detection.bbox[1] + detection.bbox[3] / 2
+  const normX = cx / canvasW
+  const normY = cy / canvasH
+
+  if (getDepthAt) {
+    const depth = getDepthAt(normX, normY)
+    extra.depth = depth
+    extra.pos3D = {
+      // simple projection en coordonnées polaires à partir de l'orientation
+      distance: depth,
+      azimuth: orientation.alpha,
+      elevation: orientation.beta,
+    }
+  }
+
+  const label = addTag(
+    detection,
+    canvasW,
+    canvasH,
+    userLabel && userLabel.trim() ? userLabel.trim() : null,
+    extra
+  )
+  let toastMsg = `Tag créé : « ${label} » (visible)`
+  if (extra.depth != null) {
+    toastMsg += `, profondeur≈${extra.depth.toFixed(2)}`
+  }
+  cameraViewRef.value.showToast(toastMsg)
+
 }
 
 // ─── Clic sur le canvas (zone sans objet) ────────────────────────────────

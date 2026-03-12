@@ -21,6 +21,12 @@
           <div class="tag-item__meta">
             Confiance: {{ Math.round(tag.confidence * 100) }}% ·
             {{ tag.visible ? 'Dans le champ' : 'Hors champ' }}
+            <template v-if="tag.depth != null">
+              · profondeur : {{ tag.depth.toFixed(2) }}
+            </template>
+            <template v-if="tag.pos3D">
+              · 3D : {{ tag.pos3D.distance.toFixed(2) }}@{{ tag.pos3D.azimuth.toFixed(0) }}°,{{ tag.pos3D.elevation.toFixed(0) }}°
+            </template>
           </div>
         </div>
         <button class="tag-item__delete" @click="$emit('remove', tag.id)" title="Supprimer">✕</button>

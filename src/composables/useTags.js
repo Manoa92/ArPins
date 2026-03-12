@@ -19,7 +19,7 @@ export function useTags() {
    * @param {number} canvasH    - hauteur du canvas natif
    * @param {string|null} overrideLabel - libellé fourni par l'utilisateur (ou null pour auto)
    */
-  function addTag(detection, canvasW, canvasH, overrideLabel = null) {
+  function addTag(detection, canvasW, canvasH, overrideLabel = null, extra = {}) {
     const [bx, by, bw, bh] = detection.bbox
     const cx = bx + bw / 2
     const cy = by + bh / 2
@@ -29,7 +29,6 @@ export function useTags() {
     if (overrideLabel) {
       label = overrideLabel
     } else {
-      // Compter combien de tags du même type existent déjà
       const count = tags.filter(t => t.detectedClass === detection.class).length
       label = count > 0 ? `${detection.class} ${count + 1}` : detection.class
     }
@@ -38,15 +37,14 @@ export function useTags() {
       id: ++_id,
       label,
       detectedClass: detection.class,
-      // Coordonnées normalisées [0-1] — indépendantes de la résolution
       normX: cx / canvasW,
       normY: cy / canvasH,
-      // Position écran calculée à chaque frame
       screenX: 0,
       screenY: 0,
       confidence: detection.score,
       visible: true,
       isManual: false,
+      ...extra, // depth, orientation, etc.
     })
 
     return label
