@@ -1,0 +1,32 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #070a0d;
+  --surface: #0c1014;
+  --surface2: #111820;
+  --accent: #00e5ff;
+  --accent-dim: rgba(0, 229, 255, 0.12);
+  --accent-glow: rgba(0, 229, 255, 0.25);
+  --danger: #ff3d71;
+  --success: #00e676;
+  --warn: #ffd600;
+  --text: #ddeef5;
+  --muted: #3d5566;
+  --border: rgba(0, 229, 255, 0.1);
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+}
